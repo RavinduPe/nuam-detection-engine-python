@@ -1,8 +1,7 @@
 
 import os
-from random import random
+import random
 import time
-
 from engine.config import ENABLED_DETECTORS
 from engine.core import DetectionEngine
 from utils.packet_source import start_sniffing
@@ -19,7 +18,6 @@ def generate_test_traffic():
 
     while True:
         sender, receiver = random.sample(list(HOSTS.items()), 2)
-
         sender_host, sender_ip = sender
         receiver_host, receiver_ip = receiver
 
