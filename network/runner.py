@@ -50,6 +50,6 @@ def start_detection_engine():
                 observed_details,
                 detector_name=f"{packet_type} Detector"
             )
-            print("New device joined:", event)
+            print("New device joined:", event , flush=True)
 
     start_sniffing(on_packet)
