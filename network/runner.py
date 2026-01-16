@@ -85,23 +85,25 @@ def create_lab_network():
     print("*** Configuring port mirroring")
 
     # Find IDS port name on switch
-    ids_intf = None
-    for intf in s1.intfList():
-        if 'hIDS' in intf.name:
-            ids_intf = intf.name
+    ids_port = None
+    for port in s1.intfList():
+        if port.link:
+            if port.link.intf1.node == hIDS or port.link.intf2.node == hIDS:
+                ids_port = port.name
+                break
 
-    if not ids_intf:
+    if not ids_port:
         raise Exception("IDS interface not found!")
 
     # Create mirror
     os.system(f"""
     ovs-vsctl -- \
-    --id=@p get port {ids_intf} \
+    --id=@p get port {ids_port} \
     --id=@m create mirror name=ids-mirror select-all=true output-port=@p \
     set bridge s1 mirrors=@m
     """)
 
-    print(f"*** Traffic mirrored to {ids_intf}")
+    print(f"*** Traffic mirrored to {ids_port}")
 
     print("*** Testing connectivity")
     net.pingAll()
