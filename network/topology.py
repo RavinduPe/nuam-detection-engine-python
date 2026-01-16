@@ -51,7 +51,7 @@ def create_lab_network():
     if not ids_port:
         raise Exception("IDS interface not found!")
 
-    # Create mirror
+
     os.system(f"""
     ovs-vsctl -- \
     --id=@p get port {ids_port} \
@@ -59,17 +59,4 @@ def create_lab_network():
     set bridge s1 mirrors=@m
     """)
 
-    print(f"*** Traffic mirrored to {ids_port}")
-
-    print("*** Testing connectivity")
-    net.pingAll()
-
-    print("*** Mininet CLI")
-    CLI(net)
-
-    print("*** Stopping network")
-    net.stop()
-
-if __name__ == '__main__':
-    setLogLevel('info')
-    create_lab_network()
+    return net
