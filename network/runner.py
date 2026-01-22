@@ -1,5 +1,3 @@
-
-import os
 import random
 import time
 from engine.config import ENABLED_DETECTORS
@@ -7,7 +5,8 @@ from engine.core import DetectionEngine
 from engine.config import BACKEND_BASE_URL , BACKEND_PORT
 from utils.packet_source import start_sniffing
 from logger.logger import Logger
-
+from handler.event_handler import EventTypeHandler
+from handler.data_handler import DataHandler
 
 def generate_test_traffic(net):
     hosts = [net.get(h) for h in ("h1", "h2", "h3", "h4")]
@@ -23,7 +22,9 @@ def generate_test_traffic(net):
 def start_detection_engine():
     engine = DetectionEngine(ENABLED_DETECTORS)
     logger = Logger(BACKEND_BASE_URL, BACKEND_PORT)
-    logger.init_socket_connection()
+    # logger.init_socket_connection()
+    event_type_handler = EventTypeHandler()
+    data_handler = DataHandler(logger , event_type_handler)
 
     def on_packet(pkt):
         packet_type = engine.observe_type(pkt)
@@ -32,6 +33,6 @@ def start_detection_engine():
             return
         
         observed_details = engine.extract_device_info(pkt, packet_type)
-        is_new = engine.is_new_device_joined(observed_details)
-        
+        data_handler.handle_observed_data(observed_details, packet_type)
+                
     start_sniffing(on_packet)
