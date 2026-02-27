@@ -7,7 +7,7 @@ from utils.packet_source import start_sniffing
 
 def start_detection_engine():
     engine = DetectionEngine(ENABLED_DETECTORS)
-    INTERVAL = 10  # seconds
+    INTERVAL = 5  # seconds
 
     logger = Logger(BACKEND_WS_URL)
     logger.init_socket_connection()
@@ -22,8 +22,9 @@ def start_detection_engine():
         packet_type = engine.observe_type(pkt)
         
         if packet_type not in ENABLED_DETECTORS:
+            print(f"[INFO] Packet type {packet_type} not in enabled detectors, skipping.")
             return
-
+        
         observed_details, observed_type = engine.extract_device_info(pkt, packet_type)
         data_handler.handle_observed_data(observed_details, observed_type)
 
