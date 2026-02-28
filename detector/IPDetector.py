@@ -1,14 +1,17 @@
 from detector.base import Detector
-from scapy.all import Ether
+from scapy.all import Ether, IP
 
 class IPDetector(Detector):
     def __init__(self):
         super().__init__(name="IPDetector", detector_type="IP")
         
     def extract_details(self, packet):
-        ip_layer = packet.getlayer("IP")
+        ip_layer = packet.getlayer(IP)
         eth = packet.getlayer(Ether)
         
+        if not ip_layer or not eth:
+            return None
+
         details = {
             "packet_type": "IP",
             "eth_src": eth.src,
@@ -26,10 +29,9 @@ class IPDetector(Detector):
             "ttl": ip_layer.ttl,
             "proto": ip_layer.proto,
             "chksum": ip_layer.chksum,
-            "is_broadcast": eth.dst == "ff:ff:ff:ff:ff:ff:ff:ff",
-            "options": ip_layer.options,
+            "is_broadcast": eth.dst == "ff:ff:ff:ff:ff:ff",
+            "options": ip_layer.options if ip_layer.options else [],
             "data_sent": len(packet)
         }
         
         return details
-    

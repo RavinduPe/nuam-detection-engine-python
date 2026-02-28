@@ -1,35 +1,80 @@
-from scapy.all import ARP, IP, TCP, UDP, ICMP, DNS
+from scapy.all import ARP, IP, TCP, UDP, ICMP, DNS, BOOTP, DHCP
 
 class DetectionEngine:
-    def __init__(self , detectors):
+    def __init__(self, detectors):
+        """
+        detectors: dict mapping packet_type -> Detector instance
+        e.g., detectors = {
+            "ARP": ARPDetector(),
+            "IP": IPDetector(),
+            "TCP-IP": TCPIPDetector(),
+            "UDP": UDPDetector(),
+            "ICMP": ICMPDetector(),
+            "DNS": DNSDetector(),
+            "DHCP": DHCPDetector(),
+            "TLS": TLSDetector(),
+            "SMB": SMBDetector()
+        }
+        """
         self.detectors = detectors
-        
-    def observe_type(self, packet):
-    
+
+    def observe_types(self, packet):
+        """
+        Return a list of detected protocol types for this packet.
+        Layer-based detection (non-exclusive).
+        """
+
+        types = []
+
         if ARP in packet:
-            return "ARP"
+            types.append("ARP")
 
-        elif IP in packet and TCP in packet:
-            return "TCP-IP"
+        if IP in packet:
+            types.append("IP")
 
-        elif IP in packet:
-            return "IP"
+        if TCP in packet:
+            types.append("TCP-IP")
 
-        elif TCP in packet:
-            return "TCP"
+        if UDP in packet:
+            types.append("UDP")
+            
+            udp_layer = packet[UDP]
+            if (udp_layer.sport == 67 or udp_layer.sport == 68 or
+                udp_layer.dport == 67 or udp_layer.dport == 68):
+                types.append("DHCP")
 
-        elif UDP in packet:
-            return "UDP"
+            if DHCP in packet or BOOTP in packet:
+                types.append("DHCP")
 
-        elif ICMP in packet:
-            return "ICMP"
+        if ICMP in packet:
+            types.append("ICMP")
 
-        elif DNS in packet:
-            return "DNS"
+        if DNS in packet:
+            types.append("DNS")
 
-        return None
-    
-    
-    def extract_device_info(self , packet , observed_type):
+        if TCP in packet:
+            try:
+                payload = bytes(packet[TCP].payload)
+                if len(payload) >= 3:
+                    if payload[0] == 0x16 and payload[1] == 0x03:
+                        types.append("TLS")
+            except Exception:
+                pass
+
+        if TCP in packet:
+            sport = packet[TCP].sport
+            dport = packet[TCP].dport
+            if sport in (139, 445) or dport in (139, 445):
+                types.append("SMB")
+
+        return types
+
+    def extract_device_info(self, packet, observed_type):
+        """
+        Extract packet details using the specific detector instance
+        """
+        if observed_type not in self.detectors:
+            return None, observed_type
+
         details = self.detectors[observed_type].extract_details(packet)
-        return details , observed_type
+        return details, observed_type

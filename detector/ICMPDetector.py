@@ -37,7 +37,7 @@ class ICMPDetector(Detector):
             "icmp_code": icmp_code,
             "identifier": getattr(icmp_layer, "id", None),
             "sequence": getattr(icmp_layer, "seq", None),
-
+            "is_broadcast": eth_layer.dst == "ff:ff:ff:ff:ff:ff" if eth_layer else False,
             "data_sent": len(packet)
         }
 

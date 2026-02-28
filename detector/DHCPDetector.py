@@ -52,7 +52,7 @@ class DHCPDetector(Detector):
             "src_port": udp_layer.sport if udp_layer else None,
             "dst_port": udp_layer.dport if udp_layer else None,
 
-            "client_mac": bootp_layer.chaddr[:6].hex(":") if bootp_layer else None,
+            "client_mac": ":".join(f"{b:02x}" for b in bootp_layer.chaddr[:6]) if bootp_layer else None,
             "your_ip": bootp_layer.yiaddr if bootp_layer else None,
             "transaction_id": bootp_layer.xid if bootp_layer else None,
 
@@ -60,8 +60,8 @@ class DHCPDetector(Detector):
             "hostname": hostname,
             "requested_ip": requested_ip,
             "server_identifier": server_id,
-
-            "data_sent": len(packet)
+            "data_sent": len(packet),
+            "is_broadcast": eth_layer.dst == "ff:ff:ff:ff:ff:ff" if eth_layer else False
         }
 
         return details

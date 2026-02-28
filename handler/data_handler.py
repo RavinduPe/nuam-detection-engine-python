@@ -28,6 +28,7 @@ class DataHandler:
             "udp_packets": 0,
             "icmp_packets": 0,
             "dns_queries": 0,
+            "dhcp_packets": 0,
             "http_requests": 0,
             "tls_handshakes": 0,
             "total_packets": 0

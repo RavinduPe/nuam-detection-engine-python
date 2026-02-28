@@ -47,7 +47,8 @@ class DNSDetector(Detector):
             "query_name": query_name,
             "query_type": query_type,
             "answers": answers,
-            "data_sent": len(packet)
+            "data_sent": len(packet),
+            "is_broadcast": eth_layer.dst == "ff:ff:ff:ff:ff:ff" if eth_layer else False
         }
 
         return details

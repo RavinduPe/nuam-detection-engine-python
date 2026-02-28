@@ -1,6 +1,5 @@
 from detector.base import Detector
-from scapy.all import TCP, IP, Ether
-from scapy.layers.tls.all import TLS, TLSClientHello
+from scapy.all import TCP, IP, Ether, Raw
 
 class TLSDetector(Detector):
     def __init__(self):
@@ -10,44 +9,31 @@ class TLSDetector(Detector):
         eth_layer = packet.getlayer(Ether)
         ip_layer = packet.getlayer(IP)
         tcp_layer = packet.getlayer(TCP)
-
-        tls_layer = packet.getlayer(TLS)
+        raw_layer = packet.getlayer(Raw)
 
         sni = None
-        tls_version = None
-        cipher_suites = []
-
-        if packet.haslayer(TLSClientHello):
-            client_hello = packet.getlayer(TLSClientHello)
-
-            tls_version = client_hello.version
-
-            if hasattr(client_hello, "ext"):
-                for ext in client_hello.ext:
-                    if ext.name == "server_name":
-                        for server in ext.servernames:
-                            sni = server.servername.decode(errors="ignore")
-
-            if hasattr(client_hello, "ciphers"):
-                cipher_suites = client_hello.ciphers
+        if raw_layer and tcp_layer.dport == 443:
+            data = raw_layer.load
+            # TLS ClientHello starts with 0x16
+            if data[0] == 0x16:
+                try:
+                    start = data.find(b'\x00\x00')# naive but works in many cases
+                    if start != -1:
+                        sni = data[start+5:].split(b'\x00', 1)[0].decode(errors="ignore")
+                except:
+                    sni = None
 
         details = {
             "packet_type": "TLS",
-
             "eth_src": eth_layer.src if eth_layer else None,
             "eth_dst": eth_layer.dst if eth_layer else None,
-
             "src_ip": ip_layer.src if ip_layer else None,
             "dst_ip": ip_layer.dst if ip_layer else None,
-
             "src_port": tcp_layer.sport if tcp_layer else None,
             "dst_port": tcp_layer.dport if tcp_layer else None,
-
-            "tls_version": tls_version,
             "sni": sni,
-            "cipher_suites": cipher_suites,
-
-            "data_sent": len(packet)
+            "data_sent": len(packet),
+            "is_broadcast": eth_layer.dst == "ff:ff:ff:ff:ff:ff" if eth_layer else False,
         }
 
         return details

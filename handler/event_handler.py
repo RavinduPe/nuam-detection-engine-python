@@ -129,6 +129,7 @@ class EventTypeHandler:
                 "udp_packets": metric_data["udp_packets"],
                 "icmp_packets": metric_data["icmp_packets"],
                 "dns_queries": metric_data["dns_queries"],
+                "dhcp_packets": metric_data["dhcp_packets"],
                 "http_requests": metric_data["http_requests"],
                 "tls_handshakes": metric_data["tls_handshakes"],
                 "total_packets": metric_data["total_packets"]

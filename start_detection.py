@@ -19,14 +19,17 @@ def start_detection_engine():
     data_handler.send_periodic_metrics(INTERVAL)
 
     def on_packet(pkt):
-        packet_type = engine.observe_type(pkt)
+        packet_types = engine.observe_types(pkt)
         
-        if packet_type not in ENABLED_DETECTORS:
-            print(f"[INFO] Packet type {packet_type} not in enabled detectors, skipping.")
-            return
+        for packet_type in packet_types: 
         
-        observed_details, observed_type = engine.extract_device_info(pkt, packet_type)
-        data_handler.handle_observed_data(observed_details, observed_type)
+            if packet_type not in ENABLED_DETECTORS:
+                continue
+        
+            print(f"[Packet] Detected {packet_type} packet")
+            
+            observed_details, observed_type = engine.extract_device_info(pkt, packet_type)
+            data_handler.handle_observed_data(observed_details, observed_type)
 
     start_sniffing(on_packet)
 
