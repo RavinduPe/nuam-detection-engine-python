@@ -3,7 +3,7 @@ import ipaddress
 
 from handler.event_handler import EventTypeHandler
 from packet_analyzer.base import BaseAnalyzer
-
+from device_fingerprint_analyzer.fingerprint_engine import FingerprintEngine
 
 class ConnectivityJoinAnalyzer(BaseAnalyzer):
     
@@ -17,9 +17,10 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
             self.local_network = ipaddress.ip_network(local_network, strict=False)
         except:
             self.local_network = ipaddress.ip_network("192.168.0.0/16", strict=False)
+            self.analyzer = FingerprintEngine("./data/oui.csv")
     
-    def analyze(self, details, known_devices , metric_data , generate_event):
-        self.handle_device_join_event(details , known_devices , metric_data , generate_event)
+    def analyze(self, pkt, details, known_devices , metric_data , generate_event):
+        self.handle_device_join_event(pkt, details , known_devices , metric_data , generate_event)
     
     
     def parse_details(self, details):
@@ -90,7 +91,7 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
         metric_data['total_devices'] += 1
         metric_data['active_devices'] += 1
         
-    def handle_device_join_event(self, details , known_devices , metric_data , generate_event):
+    def handle_device_join_event(self, pkt, details , known_devices , metric_data , generate_event):
         mac_address = ""
         if "src_mac" in details:
             mac_address = details['src_mac']
@@ -103,6 +104,7 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
             return
                 
         parsed_details = self.parse_details(details)
+        
         # Filter out devices with invalid or non-local IPs
         if self.should_filter_ip(parsed_details.get('ip_address', 'Unknown')):
             return
@@ -117,6 +119,12 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
             
                     
         if mac_address not in known_devices:
+            
+            analyzer_result = self.analyzer.analyze_packet(pkt)
+            parsed_details['vendor'] = analyzer_result['manufacturer']
+            parsed_details['device_type'] = analyzer_result['device_type']
+            parsed_details['os'] = analyzer_result['os']
+            
             self.add_known_device(mac_address, parsed_details, known_devices, metric_data)
             generate_event(parsed_details, "DEVICE_JOINED")
         

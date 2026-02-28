@@ -44,9 +44,9 @@ class DataHandler:
         self.device_connectivity_analyzer = ConnectivityJoinAnalyzer(event_type_handler , "10.0.0.0/8")
         self.periodic_checker = PeriodicCheckerHandler()
 
-    def handle_observed_data(self, details , observed_type):
+    def handle_observed_data(self, pkt, details, observed_type):
         self.mectric_analyzer.analyze(details, self.known_devices , self.metric_data)
-        self.device_connectivity_analyzer.analyze(details, self.known_devices , self.metric_data , self.generate_event)
+        self.device_connectivity_analyzer.analyze(pkt, details, self.known_devices , self.metric_data , self.generate_event)
         
     def send_batch_data(self):
         if len(self.batch) > 0:
