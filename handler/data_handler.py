@@ -3,7 +3,7 @@ from logger.logger import Logger
 from handler.event_handler import EventTypeHandler
 from threading import Thread, Event
 import time
-
+from packet_analyzer.device_connectivity_analyzer import ConnectivityJoinAnalyzer
 from packet_analyzer.metric_analyzer import MetricAnalyzer
 
 class DataHandler:
@@ -40,42 +40,11 @@ class DataHandler:
         self.timeout_seconds = 300
         self.idle_seconds = 180
         self.mectric_analyzer = MetricAnalyzer(event_type_handler)
+        self.device_connectivity_analyzer = ConnectivityJoinAnalyzer(event_type_handler)
 
-    def parse_details(self, details):
-        out = {}
-        
-        if "src_mac" in details:
-            out['mac'] =  details['src_mac']
-        elif "eth_src" in details:
-            out['mac'] = details['eth_src']
-        else:
-            out['mac'] = 'Unknown'
-            
-        
-        if "src_ip" in details:
-            out['ip_address'] = details['src_ip']
-        elif "psrc" in details:
-            out['ip_address'] = details['psrc']
-        else:
-            out['ip_address'] = 'Unknown'
-            
-        out['hostname'] = 'Unknown'
-        out['first_seen'] = None
-        out['last_seen'] = None
-        out['online'] = True
-        out['device_type'] = 'Unknown'
-        out['vendor'] = 'Unknown'
-        out['os'] = 'Unknown'
-        out['data_sent'] = 0
-        out['data_received'] = 0
-        out['status'] = 'active'
-        out['access_logs'] = []
-        out['access_services'] = []
-        return out
-        
     def handle_observed_data(self, details , observed_type):
-        self.handle_device_join_event(details)
         self.mectric_analyzer.analyze(details, self.known_devices , self.metric_data)
+        self.device_connectivity_analyzer.analyze(details, self.known_devices , self.metric_data , self.generate_event)
         
     def send_batch_data(self):
         if len(self.batch) > 0:
@@ -86,54 +55,18 @@ class DataHandler:
     def add_to_batch(self, event):
         self.batch.append(event)
         
-    def send_immediate_event(self , event):
-        self.logger.send_event(event)
-
     def generate_event(self, details, event_type):
         event = self.event_type_handler.handle_event_type(event_type, details, self.sequence_number)
         self.sequence_number += 1
         self.logger.send_event(event)
         
-    def add_known_device(self, mac_address, details):
-        details['first_seen'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-        details['last_seen'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-        self.known_devices[mac_address] = details
-        self.metric_data['total_devices'] += 1
-        self.metric_data['active_devices'] += 1
-        print(self.known_devices)
-        
+
     def remove_from_known_devices(self, mac_address):
         if mac_address in self.known_devices:
             del self.known_devices[mac_address]
             return True
         return False
 
-    def handle_device_join_event(self, details):
-        mac_address = ""
-        if "src_mac" in details:
-            mac_address = details['src_mac']
-        elif "eth_src" in details:
-            mac_address = details['eth_src']
-        else:
-            mac_address = 'Unknown'
-            
-        if mac_address == 'Unknown':
-            return
-                
-        parsed_details = self.parse_details(details)
-        
-        if mac_address in self.known_devices:
-            if self.known_devices[mac_address]['mac'] == "Unknown":
-                self.known_devices[mac_address].update(parsed_details)
-        
-            self.known_devices[mac_address]['last_seen'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-            self.known_devices[mac_address]['online'] = True
-            self.known_devices[mac_address]['status'] = 'active'
-            
-                    
-        if mac_address not in self.known_devices:
-            self.add_known_device(mac_address, parsed_details)
-            self.generate_event(parsed_details, "DEVICE_JOINED")
             
     def handle_device_left_event(self, mac_address):
         return self.remove_from_known_devices(mac_address)
