@@ -4,6 +4,7 @@ from handler.event_handler import EventTypeHandler
 from threading import Thread, Event
 import time
 from packet_analyzer.device_connectivity_analyzer import ConnectivityJoinAnalyzer
+from packet_analyzer.device_stat_analyzer import DeviceStatAnalyzer
 from packet_analyzer.metric_analyzer import MetricAnalyzer
 from handler.periodic_checker_handler import PeriodicCheckerHandler
 
@@ -43,10 +44,12 @@ class DataHandler:
         self.mectric_analyzer = MetricAnalyzer(event_type_handler)
         self.device_connectivity_analyzer = ConnectivityJoinAnalyzer(event_type_handler , "10.0.0.0/8")
         self.periodic_checker = PeriodicCheckerHandler()
+        self.deviceStatAnalyzer = DeviceStatAnalyzer(event_type_handler)
 
     def handle_observed_data(self, pkt, details, observed_type):
         self.mectric_analyzer.analyze(details, self.known_devices , self.metric_data)
         self.device_connectivity_analyzer.analyze(pkt, details, self.known_devices , self.metric_data , self.generate_event)
+        self.deviceStatAnalyzer.analyze(details, self.known_devices)
         
     def send_batch_data(self):
         if len(self.batch) > 0:
@@ -89,7 +92,6 @@ class DataHandler:
                 event = self.event_type_handler.handle_event_type("PERIODIC_METRIC_STATE", self.metric_data, self.sequence_number)
                 self.sequence_number += 1
                 self.logger.send_event(event)
-                time.sleep(2)   
                 time.sleep(interval)
         
         metric_thread = Thread(target=_metric_check, daemon=True)

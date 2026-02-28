@@ -111,6 +111,9 @@ class EventTypeHandler:
         return event_payload
 
     def periodic_metric_event_type(self, metric_data):
+        
+        active_devices = metric_data.get("active_devices", 0)
+        
         event_payload = {
             "event_type": "metric_snapshot",
             "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),

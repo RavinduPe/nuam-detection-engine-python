@@ -55,6 +55,7 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
         out['os'] = 'Unknown'
         out['data_sent'] = 0
         out['data_received'] = 0
+        out['packet_count'] = 0
         out['status'] = 'active'
         out['access_logs'] = []
         out['access_services'] = []
@@ -94,7 +95,6 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
         details['last_seen'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         known_devices[mac_address] = details
         metric_data['total_devices'] += 1
-        metric_data['active_devices'] += 1
         
     def handle_device_join_event(self, pkt, details , known_devices , metric_data , generate_event):
         mac_address = ""
@@ -111,8 +111,8 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
         parsed_details = self.parse_details(details)
         
         # Filter out devices with invalid or non-local IPs
-        # if self.should_filter_ip(parsed_details.get('ip_address', 'Unknown')):
-        #     return
+        if self.should_filter_ip(parsed_details.get('ip_address', 'Unknown')):
+            return
         
         if mac_address in known_devices:
             if known_devices[mac_address]['mac'] == "Unknown":
@@ -130,16 +130,9 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
             parsed_details['device_type'] = analyzer_result['device_type']
             parsed_details['os'] = analyzer_result['os']
             
-            print("========================================================================")
-            print(len(self.oui_loader.oui_db))
-            print(list(self.oui_loader.oui_db.items())[:5])
-            print("========================================================================")
-            
             self.add_known_device(mac_address, parsed_details, known_devices, metric_data)
             generate_event(parsed_details, "DEVICE_JOINED")
         
-
-
 
 class ConnectivityLeaveAnalyzer(BaseAnalyzer):
     

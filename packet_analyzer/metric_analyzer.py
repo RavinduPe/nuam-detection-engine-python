@@ -10,7 +10,6 @@ class MetricAnalyzer(BaseAnalyzer):
     def analyze(self, details, known_devices , metric_data):
         metric_data['total_packets'] = metric_data['total_packets'] + 1
         metric_data['data_sent'] = metric_data['data_sent'] + details['data_sent'] 
-        # metric_data['data_received'] = metric_data['data_received'] + details['data_received']
         metric_data['total_broadcast_packets'] = metric_data['total_broadcast_packets'] + (1 if details['is_broadcast'] else 0)
         metric_data['total_unicast_packets'] = metric_data['total_unicast_packets'] + (0 if details['is_broadcast'] else 1)
         
@@ -24,5 +23,9 @@ class MetricAnalyzer(BaseAnalyzer):
         metric_data['dhcp_packets'] = metric_data['dhcp_packets'] + (1 if details['packet_type'] == "DHCP" else 0)
         metric_data['http_requests'] = metric_data['http_requests'] + (1 if details['packet_type'] == "HTTP" else 0)
         metric_data['tls_handshakes'] = metric_data['tls_handshakes'] + (1 if details['packet_type'] == "TLS" else 0)
+        
+        active_devices = sum(1 for device in known_devices.values() if device['status'] == 'active')
+        metric_data['active_devices'] = active_devices
+        
     
     
