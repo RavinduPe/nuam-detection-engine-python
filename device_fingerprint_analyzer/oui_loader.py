@@ -4,7 +4,7 @@ import pickle
 
 
 class OUILoader:
-    def __init__(self, csv_path="oui.csv", cache_file="oui_cache.pkl"):
+    def __init__(self, csv_path="./data/oui.csv", cache_file="./data/oui_cache.pkl"):
         self.csv_path = csv_path
         self.cache_file = cache_file
         self.oui_db = {}
@@ -17,18 +17,19 @@ class OUILoader:
 
         with open(self.csv_path, newline='', encoding="utf-8", errors="ignore") as csvfile:
             reader = csv.reader(csvfile)
+            
+            next(reader)
+            
             for row in reader:
-                if len(row) < 2:
+                if len(row) < 3:
                     continue
 
-                prefix = row[0].strip().upper()
-                vendor = row[1].strip()
+                assignment = row[1].strip().upper()
+                vendor = row[2].strip()
 
-                prefix = prefix.replace("-", ":")
-                if len(prefix) == 6:
-                    prefix = ":".join([prefix[i:i+2] for i in range(0, 6, 2)])
-
-                self.oui_db[prefix] = vendor
+                if len(assignment) == 6:
+                    prefix = ":".join([assignment[i:i+2] for i in range(0, 6, 2)])
+                    self.oui_db[prefix] = vendor
 
         with open(self.cache_file, "wb") as f:
             pickle.dump(self.oui_db, f)

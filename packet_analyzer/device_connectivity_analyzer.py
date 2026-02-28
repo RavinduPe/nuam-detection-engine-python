@@ -4,11 +4,16 @@ import ipaddress
 from handler.event_handler import EventTypeHandler
 from packet_analyzer.base import BaseAnalyzer
 from device_fingerprint_analyzer.fingerprint_engine import FingerprintEngine
+from device_fingerprint_analyzer.oui_loader import OUILoader
 
 class ConnectivityJoinAnalyzer(BaseAnalyzer):
     
     def __init__(self, event_type_handler: EventTypeHandler, local_network="192.168.0.0/16"):
         super().__init__(event_type_handler)
+        self.oui_loader = OUILoader(csv_path="./data/oui.csv", cache_file="./data/oui_cache.pkl")
+        self.oui_loader.load()
+        self.analyzer = FingerprintEngine(self.oui_loader)
+        
         self.filter_hosts_ips = {
             "0.0.0.0",
             "255.255.255.255"
@@ -17,7 +22,7 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
             self.local_network = ipaddress.ip_network(local_network, strict=False)
         except:
             self.local_network = ipaddress.ip_network("192.168.0.0/16", strict=False)
-            self.analyzer = FingerprintEngine("./data/oui.csv")
+
     
     def analyze(self, pkt, details, known_devices , metric_data , generate_event):
         self.handle_device_join_event(pkt, details , known_devices , metric_data , generate_event)
@@ -106,8 +111,8 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
         parsed_details = self.parse_details(details)
         
         # Filter out devices with invalid or non-local IPs
-        if self.should_filter_ip(parsed_details.get('ip_address', 'Unknown')):
-            return
+        # if self.should_filter_ip(parsed_details.get('ip_address', 'Unknown')):
+        #     return
         
         if mac_address in known_devices:
             if known_devices[mac_address]['mac'] == "Unknown":
@@ -124,6 +129,11 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
             parsed_details['vendor'] = analyzer_result['manufacturer']
             parsed_details['device_type'] = analyzer_result['device_type']
             parsed_details['os'] = analyzer_result['os']
+            
+            print("========================================================================")
+            print(len(self.oui_loader.oui_db))
+            print(list(self.oui_loader.oui_db.items())[:5])
+            print("========================================================================")
             
             self.add_known_device(mac_address, parsed_details, known_devices, metric_data)
             generate_event(parsed_details, "DEVICE_JOINED")
