@@ -15,8 +15,9 @@ def start_detection_engine():
     event_type_handler = EventTypeHandler()
     data_handler = DataHandler(logger, event_type_handler)
 
-    data_handler.start_periodic_check(INTERVAL)
+    data_handler.start_periodic_check(INTERVAL * 3)
     data_handler.send_periodic_metrics(INTERVAL)
+    data_handler.send_periodic_topology(INTERVAL * 2)
 
     def on_packet(pkt):
         packet_types = engine.observe_types(pkt)

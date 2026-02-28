@@ -5,6 +5,7 @@ from threading import Thread, Event
 import time
 from packet_analyzer.device_connectivity_analyzer import ConnectivityJoinAnalyzer
 from packet_analyzer.metric_analyzer import MetricAnalyzer
+from handler.periodic_checker_handler import PeriodicCheckerHandler
 
 class DataHandler:
     
@@ -40,7 +41,8 @@ class DataHandler:
         self.timeout_seconds = 300
         self.idle_seconds = 180
         self.mectric_analyzer = MetricAnalyzer(event_type_handler)
-        self.device_connectivity_analyzer = ConnectivityJoinAnalyzer(event_type_handler)
+        self.device_connectivity_analyzer = ConnectivityJoinAnalyzer(event_type_handler , "10.0.0.0/8")
+        self.periodic_checker = PeriodicCheckerHandler()
 
     def handle_observed_data(self, details , observed_type):
         self.mectric_analyzer.analyze(details, self.known_devices , self.metric_data)
@@ -71,7 +73,8 @@ class DataHandler:
     def handle_device_left_event(self, mac_address):
         return self.remove_from_known_devices(mac_address)
     
-    def start_periodic_check(self, interval=60):
+    def start_periodic_check(self, interval):
+        # self.periodic_checker.start_periodic_check(interval, self.known_devices, self.metric_data, self.generate_event, idle_seconds=interval)
         def _periodic_check():
             while not self._stop_event.is_set():
                 self.periodic_check_for_device_leave()
@@ -86,10 +89,23 @@ class DataHandler:
                 event = self.event_type_handler.handle_event_type("PERIODIC_METRIC_STATE", self.metric_data, self.sequence_number)
                 self.sequence_number += 1
                 self.logger.send_event(event)
+                time.sleep(2)   
                 time.sleep(interval)
         
         metric_thread = Thread(target=_metric_check, daemon=True)
         metric_thread.start()
+        
+        
+    def send_periodic_topology(self , interval=15):
+        def _topology_check():
+            while not self._stop_event.is_set():
+                topology_event = self.event_type_handler.handle_event_type("PERIODIC_TOPOLOGY_STATE", self.known_devices, self.sequence_number)
+                self.sequence_number += 1
+                self.logger.send_event(topology_event)
+                time.sleep(interval)
+        
+        topology_thread = Thread(target=_topology_check, daemon=True)
+        topology_thread.start()
     
     def stop_periodic_check(self):
         if self._check_thread:

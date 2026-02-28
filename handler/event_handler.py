@@ -5,7 +5,7 @@ class EventTypeHandler:
     
     def __init__(self):
         self.event__to_state_mapper = {
-            "DEVICE_JOINED" : "TOPOLOGY"
+            "DEVICE_JOINED" : "TOPOLOGY",
         }
     
     def handle_event_type(self, event_type, details, seq_number):
@@ -99,7 +99,7 @@ class EventTypeHandler:
         
         return event_payload
     
-    def periodic_topology_event_type(self, metric_data , known_devices):
+    def periodic_topology_event_type(self, known_devices):
         event_payload = {
             "event_type": "topology_snapshot",
             "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),

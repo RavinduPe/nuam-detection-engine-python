@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import ipaddress
 
 from handler.event_handler import EventTypeHandler
 from packet_analyzer.base import BaseAnalyzer
@@ -6,8 +7,16 @@ from packet_analyzer.base import BaseAnalyzer
 
 class ConnectivityJoinAnalyzer(BaseAnalyzer):
     
-    def __init__(self, event_type_handler: EventTypeHandler):
+    def __init__(self, event_type_handler: EventTypeHandler, local_network="192.168.0.0/16"):
         super().__init__(event_type_handler)
+        self.filter_hosts_ips = {
+            "0.0.0.0",
+            "255.255.255.255"
+        }
+        try:
+            self.local_network = ipaddress.ip_network(local_network, strict=False)
+        except:
+            self.local_network = ipaddress.ip_network("192.168.0.0/16", strict=False)
     
     def analyze(self, details, known_devices , metric_data , generate_event):
         self.handle_device_join_event(details , known_devices , metric_data , generate_event)
@@ -45,6 +54,35 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
         out['access_services'] = []
         return out
     
+    def should_filter_ip(self, ip_address):
+        """Check if IP should be filtered (localhost, non-local network, or invalid)"""
+        if ip_address == 'Unknown' or ip_address in self.filter_hosts_ips:
+            return True
+        
+        try:
+            ip_obj = ipaddress.ip_address(ip_address)
+            
+            # Filter localhost addresses (127.0.0.0/8)
+            if ip_obj.is_loopback:
+                return True
+            
+            # Filter link-local addresses (169.254.0.0/16)
+            if ip_obj.is_link_local:
+                return True
+            
+            # Filter multicast addresses
+            if ip_obj.is_multicast:
+                return True
+            
+            # Check if IP is in local network
+            if not ip_obj in self.local_network:
+                return True
+            
+            return False
+        except ValueError:
+            # Invalid IP address
+            return True
+    
     def add_known_device(self, mac_address, details, known_devices, metric_data):
         details['first_seen'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         details['last_seen'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
@@ -65,6 +103,9 @@ class ConnectivityJoinAnalyzer(BaseAnalyzer):
             return
                 
         parsed_details = self.parse_details(details)
+        # Filter out devices with invalid or non-local IPs
+        if self.should_filter_ip(parsed_details.get('ip_address', 'Unknown')):
+            return
         
         if mac_address in known_devices:
             if known_devices[mac_address]['mac'] == "Unknown":
